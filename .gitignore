@@ -1,0 +1,45 @@
+# Environment & Secrets
+.env
+.env.local
+*.env
+
+# Python Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+third_party/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Workspace Inputs & Outputs (Ignore imported / uploaded images and generated 3D models)
+workspace/inputs/*
+!workspace/inputs/.gitkeep
+workspace/outputs/*
+!workspace/outputs/.gitkeep
+
+# Blender backup & temp files
+*.blend1
+*.blend2
+*.blend@
+
+# Scratch & Temporary
+scratch/
+*.tmp
+*.log
+
+# Operating System & IDE
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.vscode/
+.idea/

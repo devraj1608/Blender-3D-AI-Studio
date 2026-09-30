@@ -1,0 +1,1729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blender Image-to-3D Studio | AI 3D Reconstruction</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+  <style>
+    :root {
+      --bg-base: #08090d;
+      --bg-panel: rgba(16, 18, 26, 0.82);
+      --bg-card: rgba(23, 26, 38, 0.7);
+      --bg-card-hover: rgba(30, 34, 50, 0.9);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-focus: rgba(99, 102, 241, 0.5);
+      --accent-primary: #6366f1;
+      --accent-secondary: #8b5cf6;
+      --accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      --accent-hover: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-subtle: #64748b;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --shadow-lg: 0 16px 36px -8px rgba(0, 0, 0, 0.5);
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-full: 9999px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 85% 80%, rgba(139, 92, 246, 0.06) 0%, transparent 45%);
+    }
+
+    /* Top Navigation Header */
+    header {
+      height: 58px;
+      background: rgba(11, 13, 20, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--accent-gradient);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 16px rgba(99, 102, 241, 0.4);
+    }
+
+    .brand-icon svg {
+      width: 18px;
+      height: 18px;
+      fill: #ffffff;
+    }
+
+    .brand-text {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: var(--radius-full);
+      background: rgba(99, 102, 241, 0.15);
+      color: #a5b4fc;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--text-subtle);
+    }
+
+    .status-dot.online {
+      background: var(--success);
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+    }
+
+    .status-dot.purple {
+      background: #a855f7;
+      box-shadow: 0 0 8px rgba(168, 85, 247, 0.6);
+    }
+
+    .btn-token-config {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 12px;
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      color: #fbbf24;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+
+    .btn-token-config:hover {
+      background: rgba(245, 158, 11, 0.18);
+      border-color: rgba(245, 158, 11, 0.5);
+      transform: translateY(-1px);
+    }
+
+    /* Main Workspace Layout */
+    .studio-container {
+      display: flex;
+      flex: 1;
+      height: calc(100vh - 58px);
+      overflow: hidden;
+    }
+
+    /* Left Sidebar: Controls & Settings */
+    .studio-sidebar {
+      width: 400px;
+      min-width: 400px;
+      background: var(--bg-panel);
+      backdrop-filter: blur(16px);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 20px;
+      gap: 20px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-subtle);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Upload Zone */
+    .upload-card {
+      border: 1.5px dashed var(--border-subtle);
+      background: var(--bg-card);
+      border-radius: var(--radius-md);
+      padding: 24px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    .upload-card * {
+      pointer-events: none;
+    }
+
+    .upload-card:hover, .upload-card.dragover {
+      border-color: var(--accent-primary);
+      background: rgba(99, 102, 241, 0.05);
+      transform: translateY(-1px);
+    }
+
+    .upload-icon-wrapper {
+      width: 44px;
+      height: 44px;
+      margin: 0 auto 12px;
+      border-radius: 50%;
+      background: rgba(99, 102, 241, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-primary);
+    }
+
+    .upload-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 4px;
+    }
+
+    .upload-desc {
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+
+    /* Selected Preview Box */
+    .selected-preview {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+    }
+
+    .preview-thumb {
+      width: 52px;
+      height: 52px;
+      border-radius: var(--radius-sm);
+      object-fit: contain;
+      background: #000000;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .preview-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .preview-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .preview-tag {
+      font-size: 11px;
+      color: var(--success);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 2px;
+    }
+
+    .btn-icon-clear {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .btn-icon-clear:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--danger);
+    }
+
+    /* Sample Presets */
+    .presets-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .preset-chip {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 6px 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      font-size: 11.5px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .preset-chip:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-main);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Engine Selector */
+    .engine-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .engine-card {
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-card);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      gap: 12px;
+      position: relative;
+    }
+
+    .engine-card:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .engine-card.active {
+      border-color: var(--accent-primary);
+      background: rgba(99, 102, 241, 0.08);
+      box-shadow: 0 0 0 1px var(--accent-primary), 0 4px 20px -2px rgba(99, 102, 241, 0.2);
+    }
+
+    .engine-radio {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 1.5px solid var(--text-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+      transition: all 0.2s;
+    }
+
+    .engine-card.active .engine-radio {
+      border-color: var(--accent-primary);
+      background: var(--accent-primary);
+    }
+
+    .engine-card.active .engine-radio::after {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #ffffff;
+    }
+
+    .engine-content {
+      flex: 1;
+    }
+
+    .engine-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .engine-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .engine-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .badge-cloud {
+      background: rgba(139, 92, 246, 0.2);
+      color: #c4b5fd;
+      border: 1px solid rgba(139, 92, 246, 0.4);
+    }
+
+    .badge-offline {
+      background: rgba(16, 185, 129, 0.15);
+      color: #6ee7b7;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .engine-desc {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .engine-extra {
+      margin-top: 6px;
+      font-size: 11px;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Color Fidelity Notice */
+    .fidelity-box {
+      background: rgba(16, 185, 129, 0.06);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 11.5px;
+      color: #a7f3d0;
+    }
+
+    .fidelity-box svg {
+      width: 18px;
+      height: 18px;
+      color: var(--success);
+      flex-shrink: 0;
+    }
+
+    /* Primary Generate Button */
+    .btn-generate {
+      width: 100%;
+      padding: 14px;
+      border-radius: var(--radius-md);
+      border: none;
+      background: var(--accent-gradient);
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 18px rgba(99, 102, 241, 0.35);
+      margin-top: 4px;
+    }
+
+    .btn-generate:hover:not(:disabled) {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(99, 102, 241, 0.5);
+    }
+
+    .btn-generate:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* Generation Progress Card */
+    .progress-box {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .progress-status-text {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .progress-bar-track {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 30%;
+      background: var(--accent-gradient);
+      border-radius: var(--radius-full);
+      animation: indeterminate 2s infinite ease-in-out;
+    }
+
+    @keyframes indeterminate {
+      0% { transform: translateX(-100%); width: 30%; }
+      50% { width: 60%; }
+      100% { transform: translateX(350%); width: 30%; }
+    }
+
+    .progress-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .step-item {
+      font-size: 11px;
+      color: var(--text-subtle);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .step-item.active {
+      color: var(--accent-primary);
+      font-weight: 500;
+    }
+
+    .step-item.done {
+      color: var(--success);
+    }
+
+    /* Blender Live Tools Bar */
+    .blender-tools {
+      margin-top: auto;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .blender-tools-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-subtle);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .blender-btns-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .btn-blender {
+      flex: 1;
+      padding: 7px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .btn-blender:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    /* Right Main Stage (3D Viewport) */
+    .studio-stage {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background: radial-gradient(circle at 50% 50%, #151824 0%, #08090d 100%);
+      overflow: hidden;
+    }
+
+    /* Stage Toolbar */
+    .stage-toolbar {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: rgba(11, 13, 20, 0.6);
+      backdrop-filter: blur(8px);
+      z-index: 10;
+    }
+
+    .tabs-group {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-card);
+      padding: 3px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .tab-btn {
+      padding: 4px 12px;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+    }
+
+    .tab-btn.active {
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .stage-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .cam-btn-group {
+      display: flex;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+
+    .cam-btn {
+      padding: 4px 10px;
+      background: transparent;
+      border: none;
+      border-right: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      font-size: 11.5px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .cam-btn:last-child {
+      border-right: none;
+    }
+
+    .cam-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+    }
+
+    .action-icon-btn {
+      padding: 6px 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .action-icon-btn:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-main);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    /* 3D Canvas / Model Viewer */
+    .viewport-canvas {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    model-viewer {
+      width: 100%;
+      height: 100%;
+      display: none;
+      background-color: transparent;
+      --poster-color: transparent;
+    }
+
+    /* Empty Viewport Placeholder */
+    .empty-viewport {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+    }
+
+    .empty-cube-illustration {
+      width: 100px;
+      height: 100px;
+      margin-bottom: 20px;
+      opacity: 0.85;
+      animation: float 4s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-8px) rotate(2deg); }
+    }
+
+    .empty-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    .empty-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      max-width: 360px;
+      line-height: 1.5;
+    }
+
+    /* Studio Render View */
+    .render-container {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: #08090d;
+      padding: 24px;
+    }
+
+    .render-img {
+      max-width: 90%;
+      max-height: 90%;
+      border-radius: var(--radius-md);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+      border: 1px solid var(--border-subtle);
+    }
+
+    /* Floating Viewport Metadata */
+    .viewport-badge {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(11, 13, 20, 0.75);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-full);
+      padding: 6px 14px;
+      font-size: 11.5px;
+      color: var(--text-muted);
+      display: none;
+      align-items: center;
+      gap: 8px;
+      z-index: 10;
+    }
+
+    /* Modal Dialog for Hugging Face Token */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .modal-card {
+      width: 460px;
+      background: #12141e;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-desc {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .token-input-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .token-input {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      color: #ffffff;
+      font-size: 13px;
+      font-family: monospace;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .token-input:focus {
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .btn-secondary {
+      padding: 8px 16px;
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-main);
+    }
+
+    .btn-primary {
+      padding: 8px 18px;
+      background: var(--accent-gradient);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    /* Toast System */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 300;
+    }
+
+    .toast {
+      padding: 10px 16px;
+      border-radius: var(--radius-md);
+      background: #1c1f2e;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      font-size: 12.5px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      animation: slideIn 0.25s ease;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header>
+    <a href="#" class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <div class="brand-text">
+        Blender 3D AI Studio
+        <span class="brand-badge">Pro Studio</span>
+      </div>
+    </a>
+
+    <div class="header-status">
+      <!-- Blender 5.0 Status -->
+      <div class="status-pill" id="pillBlender">
+        <div class="status-dot" id="dotBlender"></div>
+        <span id="labelBlender">Connecting Blender...</span>
+      </div>
+
+      <!-- Vision LLM Status -->
+      <div class="status-pill" id="pillVlm">
+        <div class="status-dot purple"></div>
+        <span id="labelVlm">Qwen2.5-VL</span>
+      </div>
+
+      <!-- Hugging Face Token Settings (.env storage) -->
+      <button class="btn-token-config" onclick="openTokenModal()">
+        <span>🔑</span>
+        <span id="labelToken">HF Token: Configured (.env)</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Studio Workspace -->
+  <div class="studio-container">
+    
+    <!-- Left Sidebar: Controls -->
+    <aside class="studio-sidebar">
+      
+      <!-- Section 1: Reference Image -->
+      <div>
+        <div class="section-label">
+          <span>1. Reference Image</span>
+          <span style="font-size: 10px; color: var(--accent-primary);">Single / Multi-View</span>
+        </div>
+
+        <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp,image/jpg" style="display:none" onchange="handleFileSelect(event)">
+        <div class="upload-card" id="dropzone" onclick="document.getElementById('fileInput').click()">
+          <div class="upload-icon-wrapper">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+          </div>
+          <div class="upload-title">Drop reference image or browse</div>
+          <div class="upload-desc">Supports PNG, JPG, WEBP</div>
+        </div>
+
+        <div class="selected-preview" id="previewBox">
+          <img class="preview-thumb" id="previewThumb" src="" alt="Thumbnail">
+          <div class="preview-info">
+            <div class="preview-name" id="previewName">image.png</div>
+            <div class="preview-tag">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              Ready for reconstruction
+            </div>
+          </div>
+          <button class="btn-icon-clear" onclick="clearSelectedImage()" title="Remove image">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+
+
+      </div>
+
+      <!-- Section 2: 3D Engine Selection -->
+      <div>
+        <div class="section-label">
+          <span>2. 3D Synthesis Engine</span>
+          <span style="font-size: 10px; color: var(--text-subtle);">Dual Pipeline</span>
+        </div>
+
+        <div class="engine-grid">
+          <!-- TRELLIS Option -->
+          <div class="engine-card active" id="cardTrellis" onclick="selectEngine('trellis')">
+            <div class="engine-radio"></div>
+            <div class="engine-content">
+              <div class="engine-header">
+                <span class="engine-title">🌟 TRELLIS Diffusion</span>
+                <span class="engine-badge badge-cloud">ZeroGPU A100</span>
+              </div>
+              <div class="engine-desc">
+                High-fidelity 3D generative diffusion with detailed geometry, sharp limbs, and PBR material maps.
+              </div>
+              <div class="engine-extra" id="trellisTokenStatus">
+                ✓ Uses HF Token in .env
+              </div>
+            </div>
+          </div>
+
+          <!-- TripoSR Option -->
+          <div class="engine-card" id="cardTriposr" onclick="selectEngine('triposr')">
+            <div class="engine-radio"></div>
+            <div class="engine-content">
+              <div class="engine-header">
+                <span class="engine-title">⚡ TripoSR Neural</span>
+                <span class="engine-badge badge-offline">100% Offline</span>
+              </div>
+              <div class="engine-desc">
+                Fast neural reconstruction running directly on your Mac CPU. Zero account, zero cloud, 100% offline.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Color Fidelity Note -->
+      <div class="fidelity-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+        </svg>
+        <div>
+          <strong>Exact Color Calibration:</strong> Standard sRGB color space, neutral studio lights, and camera UV projection ensure 100% true-to-image colors.
+        </div>
+      </div>
+
+      <!-- Generate Action CTA -->
+      <button class="btn-generate" id="btnGenerate" onclick="startGeneration()">
+        <span>✨</span>
+        <span id="btnGenText">Generate 3D Model</span>
+      </button>
+
+      <!-- Generation Progress Box -->
+      <div class="progress-box" id="progressCard">
+        <div class="progress-status-text">
+          <span id="progressSpinner">⏳</span>
+          <span id="progressStatus">1. Analyzing image proportions...</span>
+        </div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill"></div>
+        </div>
+        <div class="progress-steps">
+          <div class="step-item" id="step1">● 1. Vision LLM semantic object breakdown</div>
+          <div class="step-item" id="step2">● 2. 3D geometry & texture generation</div>
+          <div class="step-item" id="step3">● 3. Blender 5.0 bridge import & studio polish</div>
+          <div class="step-item" id="step4">● 4. True-color calibration & GLB export</div>
+        </div>
+      </div>
+
+      <!-- Blender Live Remote Controls -->
+      <div class="blender-tools">
+        <div class="blender-tools-title">
+          <span>Blender 5.0 Live Controls</span>
+          <span style="font-size: 10px; color: var(--success);">Bridge Active</span>
+        </div>
+        <div class="blender-btns-row">
+          <button class="btn-blender" onclick="blenderAction('clear_scene')">
+            <span>🧹</span> Clear Scene
+          </button>
+          <button class="btn-blender" onclick="blenderAction('render_preview')">
+            <span>📸</span> Snapshot
+          </button>
+          <button class="btn-blender" onclick="blenderAction('rotate')">
+            <span>🔄</span> Rotate 90°
+          </button>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Right Main Stage: 3D Inspection -->
+    <main class="studio-stage">
+      
+      <!-- Stage Toolbar -->
+      <div class="stage-toolbar">
+        <div class="tabs-group">
+          <button class="tab-btn active" id="tab3D" onclick="switchView('3d')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+            Interactive 3D
+          </button>
+          <button class="tab-btn" id="tabRender" onclick="switchView('render')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+            Studio Render
+          </button>
+        </div>
+
+        <div class="stage-actions">
+          <!-- Camera Presets -->
+          <div class="cam-btn-group" id="camStrip" style="display:none;">
+            <button class="cam-btn" onclick="snapCamera('0deg 90deg 105%')">Front</button>
+            <button class="cam-btn" onclick="snapCamera('90deg 90deg 105%')">Side</button>
+            <button class="cam-btn" onclick="snapCamera('0deg 0deg 105%')">Top</button>
+            <button class="cam-btn" onclick="snapCamera('45deg 75deg 105%')">3/4</button>
+          </div>
+
+          <button class="action-icon-btn" id="btnSpin" onclick="toggleSpin()" style="display:none;">
+            <span>🔄</span> Auto-Spin
+          </button>
+
+          <button class="action-icon-btn" id="btnDownload" onclick="downloadGlb()" style="display:none;">
+            <span>⬇️</span> Download .GLB
+          </button>
+
+          <button class="action-icon-btn" onclick="reset3DCamera()">
+            <span>🎯</span> Reset
+          </button>
+        </div>
+      </div>
+
+      <!-- Viewport Canvas -->
+      <div class="viewport-canvas">
+        
+        <!-- Empty State -->
+        <div class="empty-viewport" id="stagePlaceholder">
+          <svg class="empty-cube-illustration" viewBox="0 0 100 100" fill="none">
+            <polygon points="50,15 85,32 50,50 15,32" stroke="#6366f1" stroke-width="1.5" fill="rgba(99, 102, 241, 0.08)" />
+            <polygon points="15,32 50,50 50,85 15,68" stroke="#8b5cf6" stroke-width="1.5" fill="rgba(139, 92, 246, 0.05)" />
+            <polygon points="50,50 85,32 85,68 50,85" stroke="#38bdf8" stroke-width="1.5" fill="rgba(56, 189, 248, 0.05)" />
+            <circle cx="50" cy="50" r="3" fill="#6366f1" />
+          </svg>
+          <div class="empty-title">Ready for 3D Generation</div>
+          <div class="empty-subtitle">
+            Upload an image on the left and select your preferred 3D engine to reconstruct geometry directly in Blender.
+          </div>
+        </div>
+
+        <!-- 3D Model Viewer with Neutral Tone Mapping for True Colors -->
+        <model-viewer
+          id="modelViewer"
+          src=""
+          camera-controls
+          auto-rotate
+          tone-mapping="neutral"
+          exposure="1.05"
+          shadow-intensity="1.4"
+          shadow-softness="0.9"
+          interaction-prompt="none"
+          camera-orbit="45deg 75deg 105%"
+          min-camera-orbit="auto auto 5%"
+          max-camera-orbit="auto auto 500%">
+        </model-viewer>
+
+        <!-- Studio Snapshot Image -->
+        <div class="render-container" id="studioRenderContainer">
+          <img class="render-img" id="studioRenderImg" src="" alt="Blender Studio Render">
+        </div>
+
+        <!-- Floating Metadata Badge -->
+        <div class="viewport-badge" id="viewportBadge">
+          <span id="badgeEngine">🌟 TRELLIS</span>
+          <span>•</span>
+          <span id="badgeTime">28s</span>
+          <span>•</span>
+          <span style="color:var(--success)">Synced in Blender 5.0</span>
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- Hugging Face Token Settings Modal -->
+  <div class="modal-overlay" id="tokenModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>🔑</span> Hugging Face Access Token
+        </div>
+        <button class="btn-icon-clear" onclick="closeTokenModal()">✕</button>
+      </div>
+      <div class="modal-desc">
+        Your token is saved permanently to your project's <code>.env</code> file (<code>HF_TOKEN=...</code>) and gives you priority GPU compute on the TRELLIS ZeroGPU cluster.
+      </div>
+      <div class="token-input-group">
+        <input type="password" id="inputModalToken" class="token-input" placeholder="hf_xxxxxxxxxxxxxxxxxxxxxxxxx">
+        <button class="btn-secondary" onclick="toggleTokenVisibility()">👁️</button>
+      </div>
+      <div style="font-size: 11.5px; color: var(--text-subtle);">
+        Get a free Read token from <a href="https://huggingface.co/settings/tokens" target="_blank" style="color: #6366f1; text-decoration: none;">huggingface.co/settings/tokens</a>.
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeTokenModal()">Cancel</button>
+        <button class="btn-primary" onclick="saveTokenToEnv()">Save to .env</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Studio Controller Script -->
+  <script>
+    let currentImagePath = "";
+    let currentGlbUrl = "";
+    let currentRenderUrl = "";
+    let selectedEngine = "trellis";
+    let isAutoSpinning = true;
+
+    // DOM Elements
+    const dropzone = document.getElementById("dropzone");
+    const previewBox = document.getElementById("previewBox");
+    const previewThumb = document.getElementById("previewThumb");
+    const previewName = document.getElementById("previewName");
+    const modelViewer = document.getElementById("modelViewer");
+    const stagePlaceholder = document.getElementById("stagePlaceholder");
+    const studioRenderContainer = document.getElementById("studioRenderContainer");
+    const studioRenderImg = document.getElementById("studioRenderImg");
+    const camStrip = document.getElementById("camStrip");
+    const btnSpin = document.getElementById("btnSpin");
+    const btnDownload = document.getElementById("btnDownload");
+    const viewportBadge = document.getElementById("viewportBadge");
+    const progressCard = document.getElementById("progressCard");
+    const progressStatus = document.getElementById("progressStatus");
+
+    window.addEventListener("DOMContentLoaded", () => {
+      checkSystemStatus();
+      setInterval(checkSystemStatus, 15000);
+      setupDragDrop();
+      // Clipboard paste support (Cmd+V / Ctrl+V)
+      window.addEventListener("paste", (e) => {
+        const items = e.clipboardData && e.clipboardData.items;
+        if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type.indexOf("image") !== -1) {
+            const blob = items[i].getAsFile();
+            if (blob) {
+              uploadFile(blob);
+              showToast("Pasted image from clipboard!", "info", 2000);
+            }
+            break;
+          }
+        }
+      });
+
+      checkTokenStatus();
+      loadLatestModel();
+    });
+
+    // Toast System
+    function showToast(message, type = "info", duration = 3000) {
+      const container = document.getElementById("toastContainer");
+      if (!container) return;
+      const toast = document.createElement("div");
+      toast.className = "toast";
+      const icon = type === "success" ? "✅" : type === "error" ? "❌" : type === "warning" ? "⚠️" : "ℹ️";
+      toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(10px)";
+        toast.style.transition = "all 0.25s";
+        setTimeout(() => toast.remove(), 250);
+      }, duration);
+    }
+
+    // System Status Polling
+    async function checkSystemStatus() {
+      try {
+        const res = await fetch("/api/status");
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        const dotB = document.getElementById("dotBlender");
+        const lblB = document.getElementById("labelBlender");
+        if (data.blender && data.blender.connected) {
+          if (dotB) dotB.className = "status-dot online";
+          if (lblB) lblB.textContent = `Blender ${data.blender.version || "5.0"}`;
+        } else {
+          if (dotB) dotB.className = "status-dot";
+          if (lblB) lblB.textContent = "Blender Offline";
+        }
+
+        const lblVlm = document.getElementById("labelVlm");
+        if (data.vlm && data.vlm.active_model && lblVlm) {
+          lblVlm.textContent = data.vlm.active_model;
+        }
+      } catch (e) {
+        console.warn("Status poll error:", e);
+      }
+    }
+
+    // Token Management (.env)
+    async function checkTokenStatus() {
+      try {
+        const res = await fetch("/api/settings/token");
+        if (!res.ok) return;
+        const data = await res.json();
+        const lblToken = document.getElementById("labelToken");
+        const trellisStatus = document.getElementById("trellisTokenStatus");
+        const modalInput = document.getElementById("inputModalToken");
+
+        if (data.configured) {
+          if (lblToken) lblToken.textContent = `🔑 HF: ${data.masked} (.env)`;
+          if (trellisStatus) trellisStatus.innerHTML = `✓ Authenticated in .env (${data.masked})`;
+          if (modalInput && !modalInput.value) modalInput.value = data.masked;
+        } else {
+          if (lblToken) lblToken.textContent = `🔑 Setup HF Token (.env)`;
+          if (trellisStatus) trellisStatus.innerHTML = `<span style="color:#f59e0b">⚠️ Unset (Click to configure in .env)</span>`;
+        }
+      } catch (e) {
+        console.warn("Token status error:", e);
+      }
+    }
+
+    function openTokenModal() {
+      document.getElementById("tokenModal").style.display = "flex";
+    }
+
+    function closeTokenModal() {
+      document.getElementById("tokenModal").style.display = "none";
+    }
+
+    function toggleTokenVisibility() {
+      const inp = document.getElementById("inputModalToken");
+      inp.type = inp.type === "password" ? "text" : "password";
+    }
+
+    async function saveTokenToEnv() {
+      const inp = document.getElementById("inputModalToken");
+      const val = inp ? inp.value.trim() : "";
+      if (!val) {
+        showToast("Please enter a valid Hugging Face token", "warning");
+        return;
+      }
+      try {
+        const fd = new FormData();
+        fd.append("token", val);
+        const res = await fetch("/api/settings/token", { method: "POST", body: fd });
+        if (!res.ok) throw new Error("Failed to save token to .env");
+        showToast("Token saved directly to .env file!", "success", 3000);
+        closeTokenModal();
+        checkTokenStatus();
+      } catch (e) {
+        showToast("Error saving token: " + e.message, "error", 4000);
+      }
+    }
+
+    // Engine Selection Toggle
+    function selectEngine(engine) {
+      selectedEngine = engine;
+      const cardTrellis = document.getElementById("cardTrellis");
+      const cardTriposr = document.getElementById("cardTriposr");
+      const btnGenText = document.getElementById("btnGenText");
+
+      if (engine === "trellis") {
+        cardTrellis.classList.add("active");
+        cardTriposr.classList.remove("active");
+        btnGenText.textContent = "Generate 3D Model (TRELLIS)";
+        showToast("Engine: TRELLIS (High-Fidelity 3D Diffusion)", "info", 2000);
+      } else {
+        cardTrellis.classList.remove("active");
+        cardTriposr.classList.add("active");
+        btnGenText.textContent = "Generate 3D Model (TripoSR Local)";
+        showToast("Engine: TripoSR (100% Offline Local Reconstruction)", "info", 2000);
+      }
+    }
+
+    // Drag and Drop Upload
+    function setupDragDrop() {
+      if (!dropzone) return;
+      ["dragenter", "dragover", "dragleave", "drop"].forEach(ev => {
+        dropzone.addEventListener(ev, preventDefaults, false);
+        document.body.addEventListener(ev, preventDefaults, false);
+      });
+      ["dragenter", "dragover"].forEach(ev => {
+        dropzone.addEventListener(ev, () => dropzone.classList.add("dragover"), false);
+      });
+      ["dragleave", "drop"].forEach(ev => {
+        dropzone.addEventListener(ev, () => dropzone.classList.remove("dragover"), false);
+      });
+      dropzone.addEventListener("drop", handleDrop, false);
+    }
+
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    function handleDrop(e) {
+      const dt = e.dataTransfer;
+      if (dt && dt.files && dt.files.length > 0) uploadFile(dt.files[0]);
+    }
+
+    function handleFileSelect(e) {
+      if (e.target.files && e.target.files.length > 0) {
+        uploadFile(e.target.files[0]);
+      }
+      e.target.value = "";
+    }
+
+    async function uploadFile(file) {
+      const fileName = (file.name || "image.png").toLowerCase();
+      const isImg = (file.type && file.type.startsWith("image/")) || 
+                    /\.(png|jpe?g|webp|bmp|gif|tiff?)$/i.test(fileName);
+      if (!isImg) {
+        showToast("Please upload a valid image file (PNG, JPG, WEBP)", "warning", 3000);
+        return;
+      }
+      showToast(`Uploading ${file.name}...`, "info", 1500);
+      const fd = new FormData();
+      fd.append("file", file);
+      try {
+        const res = await fetch("/api/upload", { method: "POST", body: fd });
+        if (!res.ok) throw new Error("Upload failed");
+        const data = await res.json();
+        currentImagePath = data.path;
+        if (previewThumb) previewThumb.src = data.url;
+        if (previewName) previewName.textContent = file.name;
+        if (dropzone) dropzone.style.display = "none";
+        if (previewBox) previewBox.style.display = "flex";
+        showToast("Reference image loaded!", "success", 2000);
+      } catch (e) {
+        showToast("Upload error: " + e.message, "error", 4000);
+      }
+    }
+
+    function clearSelectedImage() {
+      currentImagePath = "";
+      if (previewBox) previewBox.style.display = "none";
+      if (dropzone) dropzone.style.display = "block";
+      const fi = document.getElementById("fileInput");
+      if (fi) fi.value = "";
+    }
+
+    // Primary 3D Generation Pipeline
+    async function startGeneration() {
+      if (!currentImagePath) {
+        showToast("Please upload or select an image first!", "warning", 3000);
+        return;
+      }
+
+      const btn = document.getElementById("btnGenerate");
+      const btnText = document.getElementById("btnGenText");
+      if (btn) {
+        btn.disabled = true;
+        btnText.textContent = selectedEngine === "trellis"
+          ? "Synthesizing on NVIDIA A100 GPU..."
+          : "Reconstructing on Mac CPU...";
+      }
+
+      if (progressCard) progressCard.style.display = "flex";
+      resetSteps();
+      setStep(1, true);
+
+      if (progressStatus) progressStatus.textContent = "1. Vision LLM Analyzing Semantic Proportions...";
+
+      const t1 = setTimeout(() => {
+        setStep(1, false, true);
+        setStep(2, true);
+        if (progressStatus) progressStatus.textContent = selectedEngine === "trellis"
+          ? "2. TRELLIS 3D Generative Diffusion on ZeroGPU A100..."
+          : "2. TripoSR Neural Mesh Reconstruction on Mac CPU...";
+      }, 3500);
+
+      const t2 = setTimeout(() => {
+        setStep(2, false, true);
+        setStep(3, true);
+        if (progressStatus) progressStatus.textContent = "3. Blender 5.0 Live Bridge: Importing & Studio Polish...";
+      }, 32000);
+
+      const t3 = setTimeout(() => {
+        setStep(3, false, true);
+        setStep(4, true);
+        if (progressStatus) progressStatus.textContent = "4. Calibrating True sRGB Colors & Exporting GLB...";
+      }, 55000);
+
+      try {
+        const fd = new FormData();
+        fd.append("image_path", currentImagePath);
+        fd.append("engine", selectedEngine);
+
+        const res = await fetch("/api/vlm/generate", { method: "POST", body: fd });
+        clearTimeout(t1); clearTimeout(t2); clearTimeout(t3);
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || "Generation failed");
+        }
+
+        const data = await res.json();
+        setStep(1, false, true);
+        setStep(2, false, true);
+        setStep(3, false, true);
+        setStep(4, false, true);
+
+        if (progressStatus) progressStatus.textContent = `✅ 3D Model ready in ${data.elapsed_seconds || 0}s!`;
+        showToast("🎉 3D Model generated and synced to Blender!", "success", 4000);
+
+        if (data.glb_url) {
+          currentGlbUrl = data.glb_url;
+          currentRenderUrl = data.render_url;
+          displayModel(data.glb_url, data.render_url, data.engine, data.elapsed_seconds);
+        }
+      } catch (e) {
+        clearTimeout(t1); clearTimeout(t2); clearTimeout(t3);
+        if (progressStatus) progressStatus.textContent = "❌ Generation Failed: " + e.message;
+        showToast("Error: " + e.message, "error", 5000);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btnText.textContent = selectedEngine === "trellis"
+            ? "Generate 3D Model (TRELLIS)"
+            : "Generate 3D Model (TripoSR Local)";
+        }
+      }
+    }
+
+    function setStep(num, active = false, done = false) {
+      const el = document.getElementById(`step${num}`);
+      if (!el) return;
+      if (done) el.className = "step-item done";
+      else if (active) el.className = "step-item active";
+      else el.className = "step-item";
+    }
+
+    function resetSteps() {
+      for (let i = 1; i <= 4; i++) setStep(i, false, false);
+    }
+
+    // Viewport Display
+    function displayModel(glbUrl, renderUrl, engine = "TRELLIS", elapsed = 0) {
+      if (modelViewer && glbUrl) {
+        modelViewer.src = glbUrl + "?t=" + Date.now();
+        modelViewer.style.display = "block";
+      }
+      if (stagePlaceholder) stagePlaceholder.style.display = "none";
+      if (camStrip) camStrip.style.display = "flex";
+      if (btnSpin) btnSpin.style.display = "flex";
+      if (btnDownload) btnDownload.style.display = "flex";
+
+      if (viewportBadge) {
+        viewportBadge.style.display = "flex";
+        const bEng = document.getElementById("badgeEngine");
+        const bTime = document.getElementById("badgeTime");
+        if (bEng) bEng.textContent = engine.toUpperCase() === "TRELLIS" ? "🌟 TRELLIS Diffusion" : "⚡ TripoSR Neural";
+        if (bTime) bTime.textContent = `${elapsed}s`;
+      }
+
+      if (studioRenderImg && renderUrl) {
+        studioRenderImg.src = renderUrl + "?t=" + Date.now();
+      }
+      switchView("3d");
+    }
+
+    async function loadLatestModel() {
+      try {
+        const res = await fetch("/api/models/latest");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.has_model && data.glb_url) {
+          currentGlbUrl = data.glb_url;
+          currentRenderUrl = data.render_url;
+          displayModel(data.glb_url, data.render_url, "Studio", 0);
+        }
+      } catch (e) {
+        console.warn("Latest model check:", e);
+      }
+    }
+
+    function switchView(mode) {
+      const tab3D = document.getElementById("tab3D");
+      const tabRender = document.getElementById("tabRender");
+
+      if (mode === "3d") {
+        if (tab3D) tab3D.classList.add("active");
+        if (tabRender) tabRender.classList.remove("active");
+        if (modelViewer && currentGlbUrl) modelViewer.style.display = "block";
+        if (studioRenderContainer) studioRenderContainer.style.display = "none";
+      } else {
+        if (tab3D) tab3D.classList.remove("active");
+        if (tabRender) tabRender.classList.add("active");
+        if (modelViewer) modelViewer.style.display = "none";
+        if (studioRenderContainer) studioRenderContainer.style.display = "flex";
+      }
+    }
+
+    function snapCamera(orbit) {
+      if (modelViewer) modelViewer.cameraOrbit = orbit;
+    }
+
+    function toggleSpin() {
+      if (!modelViewer) return;
+      isAutoSpinning = !isAutoSpinning;
+      modelViewer.autoRotate = isAutoSpinning;
+      showToast(isAutoSpinning ? "Auto-spin enabled" : "Auto-spin paused", "info", 1500);
+    }
+
+    function reset3DCamera() {
+      if (modelViewer) {
+        modelViewer.cameraOrbit = "45deg 75deg 105%";
+        modelViewer.cameraTarget = "auto auto auto";
+      }
+    }
+
+    function downloadGlb() {
+      if (!currentGlbUrl) return;
+      const a = document.createElement("a");
+      a.href = currentGlbUrl;
+      a.download = "model_3d.glb";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+
+    function clearViewport() {
+      currentGlbUrl = "";
+      currentRenderUrl = "";
+      if (modelViewer) {
+        modelViewer.src = "";
+        modelViewer.removeAttribute("src");
+        modelViewer.style.display = "none";
+      }
+      if (stagePlaceholder) stagePlaceholder.style.display = "flex";
+      if (studioRenderContainer) studioRenderContainer.style.display = "none";
+      if (studioRenderImg) studioRenderImg.src = "";
+      if (camStrip) camStrip.style.display = "none";
+      if (btnSpin) btnSpin.style.display = "none";
+      if (btnDownload) btnDownload.style.display = "none";
+      if (viewportBadge) viewportBadge.style.display = "none";
+      switchView("3d");
+    }
+
+    // Blender Actions
+    async function blenderAction(action) {
+      try {
+        showToast(`Running Blender command: ${action}...`, "info", 1500);
+        if (action === "clear_scene") {
+          const res = await fetch("/api/blender/clear", { method: "POST" });
+          if (!res.ok) throw new Error("Clear failed");
+          clearViewport();
+          showToast("Blender scene & 3D viewport cleared!", "success");
+        } else if (action === "render_preview") {
+          const res = await fetch("/api/blender/render", { method: "POST" });
+          if (!res.ok) throw new Error("Render failed");
+          const data = await res.json();
+          if (data.render_url) {
+            currentRenderUrl = data.render_url;
+            if (studioRenderImg) studioRenderImg.src = data.render_url + "?t=" + Date.now();
+            switchView("render");
+            showToast("New studio render captured!", "success");
+          }
+        } else if (action === "rotate") {
+          const res = await fetch("/api/blender/rotate", { method: "POST" });
+          if (!res.ok) throw new Error("Rotate failed");
+          showToast("Object rotated 90°!", "success");
+        }
+      } catch (e) {
+        showToast("Blender command failed: " + e.message, "error");
+      }
+    }
+  </script>
+</body>
+</html>
